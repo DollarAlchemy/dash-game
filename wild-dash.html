@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🐎 Wild Dash</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --sky: #87CEEB;
+    --sky-deep: #4a9fd4;
+    --ground: #5d8a3c;
+    --ground-dark: #3d6b22;
+    --sun: #FFD700;
+    --gold: #f5c518;
+    --gem: #8b5cf6;
+    --apple: #ef4444;
+    --coin: #f59e0b;
+    --accent: #ff6b35;
+    --white: #fffef0;
+    --dark: #1a1a2e;
+    --panel: rgba(255,254,240,0.95);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--sky);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  #game-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 100svh;
+    max-height: 850px;
+    overflow: hidden;
+    border-radius: 0;
+    box-shadow: 0 0 60px rgba(0,0,0,0.3);
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+
+  /* ── START SCREEN ── */
+  #start-screen {
+    background: linear-gradient(180deg, #87CEEB 0%, #b8e4f7 40%, #5d8a3c 40%, #3d6b22 100%);
+  }
+
+  .title-wrap {
+    text-align: center;
+    margin-bottom: 30px;
+    animation: titleBounce 2s ease-in-out infinite;
+  }
+
+  @keyframes titleBounce {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .game-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3.2rem;
+    color: var(--white);
+    text-shadow: 3px 4px 0 #2d5a1b, 0 0 30px rgba(255,107,53,0.5);
+    letter-spacing: 2px;
+  }
+
+  .title-emoji {
+    font-size: 4rem;
+    display: block;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  }
+
+  .subtitle {
+    color: var(--white);
+    font-weight: 700;
+    font-size: 1rem;
+    text-shadow: 1px 2px 0 rgba(0,0,0,0.3);
+    letter-spacing: 1px;
+  }
+
+  .start-panel {
+    background: var(--panel);
+    border-radius: 24px;
+    padding: 24px 28px;
+    width: 85%;
+    max-width: 340px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    border: 3px solid rgba(255,255,255,0.8);
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--dark);
+    background: rgba(255,255,255,0.6);
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+  .legend-item span:first-child { font-size: 1.3rem; }
+
+  .btn-start {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #ff6b35, #f5a623);
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 18px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #c44e1a, 0 8px 20px rgba(255,107,53,0.4);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-start:active { transform: translateY(4px); box-shadow: 0 2px 0 #c44e1a; }
+
+  .hs-display {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 700;
+  }
+
+  /* ── GAME SCREEN ── */
+  #game-screen {
+    background: transparent;
+  }
+
+  #game-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .hud-pill {
+    background: rgba(26,26,46,0.75);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+    font-weight: 800;
+    font-size: 0.9rem;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  #combo-display {
+    position: absolute;
+    top: 65px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #f5c518, #ff6b35);
+    border-radius: 20px;
+    padding: 4px 16px;
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    display: none;
+    z-index: 11;
+    animation: comboPulse 0.4s ease-out;
+    pointer-events: none;
+  }
+
+  @keyframes comboPulse {
+    0% { transform: translateX(-50%) scale(1.4); }
+    100% { transform: translateX(-50%) scale(1); }
+  }
+
+  /* SHOP BUTTON */
+  #shop-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.5);
+    font-size: 1.8rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(109,40,217,0.5);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+  }
+  #shop-btn:active { transform: scale(0.9); }
+
+  /* ── D-PAD CONTROLLER ── */
+  #controller {
+    position: absolute;
+    bottom: 18px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .ctrl-btn {
+    pointer-events: all;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 0.08s, box-shadow 0.08s;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.35);
+  }
+
+  #ctrl-left, #ctrl-right {
+    background: rgba(26,26,46,0.82);
+    backdrop-filter: blur(6px);
+    border: 2px solid rgba(255,255,255,0.18);
+    color: white;
+  }
+
+  #ctrl-jump {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(145deg, #ff6b35, #f5a623);
+    font-size: 2rem;
+    border: 3px solid rgba(255,255,255,0.35);
+    box-shadow: 0 6px 0 #c44e1a, 0 0 20px rgba(255,107,53,0.4);
+  }
+
+  .ctrl-btn:active {
+    transform: translateY(4px) scale(0.93);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.35);
+  }
+  #ctrl-jump:active {
+    box-shadow: 0 2px 0 #c44e1a;
+  }
+
+  /* FLOATING TEXT */
+  .float-text {
+    position: absolute;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.4rem;
+    font-weight: 900;
+    pointer-events: none;
+    z-index: 20;
+    animation: floatUp 1s ease-out forwards;
+    text-shadow: 1px 2px 0 rgba(0,0,0,0.3);
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    50% { opacity: 1; transform: translateY(-30px) scale(1.1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
+  }
+
+  /* PARTICLE */
+  .particle {
+    position: absolute;
+    pointer-events: none;
+    z-index: 19;
+    border-radius: 50%;
+    animation: particleBurst 0.7s ease-out forwards;
+  }
+  @keyframes particleBurst {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0) translate(var(--tx), var(--ty)); }
+  }
+
+  /* LEVEL UP */
+  #level-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    background: linear-gradient(135deg, #f5c518, #ff6b35);
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    padding: 16px 40px;
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    display: none;
+    z-index: 30;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  /* ── SHOP SCREEN ── */
+  #shop-screen {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  }
+
+  .shop-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    color: var(--white);
+    text-shadow: 0 0 20px var(--gem);
+    margin-bottom: 8px;
+  }
+
+  .shop-gold {
+    background: rgba(245,197,24,0.2);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    padding: 6px 20px;
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 1rem;
+    margin-bottom: 20px;
+  }
+
+  .shop-items {
+    width: 88%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .shop-item {
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: background 0.2s;
+  }
+  .shop-item.owned { border-color: #22c55e; background: rgba(34,197,94,0.1); }
+  .shop-item.active-skin { border-color: var(--gold); background: rgba(245,197,24,0.1); }
+
+  .shop-icon { font-size: 2.2rem; }
+  .shop-info { flex: 1; }
+  .shop-name { color: white; font-weight: 800; font-size: 0.95rem; }
+  .shop-desc { color: rgba(255,255,255,0.55); font-size: 0.78rem; margin-top: 2px; }
+
+  .btn-buy {
+    background: linear-gradient(135deg, #f5c518, #f59e0b);
+    color: #1a1a2e;
+    border: none;
+    border-radius: 14px;
+    padding: 8px 16px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 3px 0 #c47d00;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-buy:active { transform: translateY(2px); box-shadow: 0 1px 0 #c47d00; }
+  .btn-buy:disabled {
+    background: #444;
+    color: #888;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .btn-equip {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 8px 16px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #4c1d95;
+    transition: transform 0.1s;
+  }
+  .btn-equip:active { transform: translateY(2px); }
+  .equipped-badge {
+    background: var(--gold);
+    color: #1a1a2e;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-weight: 800;
+    font-size: 0.8rem;
+  }
+
+  .btn-back {
+    margin-top: 18px;
+    padding: 12px 36px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 18px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-back:active { background: rgba(255,255,255,0.2); }
+
+  /* ── GAME OVER ── */
+  #over-screen {
+    background: linear-gradient(180deg, #1a1a2e 0%, #2d1b69 100%);
+  }
+
+  .over-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.5rem;
+    color: var(--white);
+    text-shadow: 0 0 30px rgba(255,107,53,0.8);
+    margin-bottom: 4px;
+  }
+
+  .over-panel {
+    background: rgba(255,254,240,0.08);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 22px 28px;
+    width: 85%;
+    max-width: 340px;
+    margin: 20px 0;
+  }
+
+  .over-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    color: white;
+  }
+  .over-stat:last-child { border-bottom: none; }
+  .over-stat .label { color: rgba(255,255,255,0.55); font-size: 0.9rem; }
+  .over-stat .val { font-family: 'Fredoka One', cursive; font-size: 1.2rem; }
+  .over-stat .val.new-hs { color: var(--gold); animation: glow 1s ease-in-out infinite alternate; }
+
+  @keyframes glow {
+    from { text-shadow: 0 0 5px var(--gold); }
+    to { text-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold); }
+  }
+
+  .over-btns { display: flex; gap: 12px; width: 85%; max-width: 340px; }
+  .btn-restart {
+    flex: 1;
+    padding: 14px;
+    background: linear-gradient(135deg, #ff6b35, #f5a623);
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 18px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #c44e1a;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-restart:active { transform: translateY(3px); box-shadow: 0 2px 0 #c44e1a; }
+
+  .btn-shop2 {
+    flex: 0 0 56px;
+    height: 52px;
+    background: rgba(139,92,246,0.7);
+    border: 2px solid #8b5cf6;
+    border-radius: 18px;
+    font-size: 1.6rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* SFX label */
+  #sfx-toggle {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: rgba(0,0,0,0.3);
+    border: none;
+    border-radius: 12px;
+    padding: 6px 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    z-index: 40;
+    color: white;
+  }
+</style>
+</head>
+<body>
+<div id="game-wrap">
+
+  <!-- SFX Toggle -->
+  <button id="sfx-toggle" title="Toggle Sound">🔊</button>
+
+  <!-- START -->
+  <div class="screen" id="start-screen">
+    <div class="title-wrap">
+      <span class="title-emoji">🐎</span>
+      <div class="game-title">WILD DASH</div>
+      <div class="subtitle">COLLECT · DODGE · UPGRADE</div>
+    </div>
+    <div class="start-panel">
+      <div class="legend">
+        <div class="legend-item"><span>🍎</span><span>+5 pts</span></div>
+        <div class="legend-item"><span>💎</span><span>+20 pts</span></div>
+        <div class="legend-item"><span>🪙</span><span>+1 gold</span></div>
+        <div class="legend-item"><span>🪨</span><span>DODGE!</span></div>
+      </div>
+      <div class="legend" style="grid-template-columns:1fr;margin-bottom:20px;">
+        <div class="legend-item" style="justify-content:center;">◀ ⬆ ▶ Use the D-pad to move &amp; jump</div>
+        <div class="legend-item" style="justify-content:center;">Every 200 pts = Level Up 🚀</div>
+      </div>
+      <button class="btn-start" id="btn-start">START DASHING!</button>
+      <div class="hs-display" id="hs-display">Best: 0 pts</div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen hidden" id="game-screen">
+    <canvas id="game-canvas"></canvas>
+    <div id="hud">
+      <div class="hud-pill">⭐ <span id="hud-score">0</span></div>
+      <div class="hud-pill">⚡ LV <span id="hud-level">1</span></div>
+      <div class="hud-pill">🪙 <span id="hud-gold">0</span></div>
+    </div>
+    <div id="combo-display">🔥 x<span id="combo-count">2</span> COMBO!</div>
+    <div id="level-banner">⚡ LEVEL UP! ⚡<br><span id="level-num"></span></div>
+    <button id="shop-btn">🛒</button>
+    <div id="controller">
+      <button class="ctrl-btn" id="ctrl-left">◀</button>
+      <button class="ctrl-btn" id="ctrl-jump">⬆</button>
+      <button class="ctrl-btn" id="ctrl-right">▶</button>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div class="screen hidden" id="shop-screen">
+    <div class="shop-title">🛒 STABLES SHOP</div>
+    <div class="shop-gold">🪙 Gold: <span id="shop-gold-amt">0</span></div>
+    <div class="shop-items" id="shop-items"></div>
+    <button class="btn-back" id="btn-back-shop">← Back to Game</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="screen hidden" id="over-screen">
+    <div class="over-title">💨 WIPED OUT!</div>
+    <div class="over-panel">
+      <div class="over-stat"><span class="label">Score</span><span class="val" id="over-score">0</span></div>
+      <div class="over-stat"><span class="label">Best Score</span><span class="val" id="over-hs">0</span></div>
+      <div class="over-stat"><span class="label">Gold Earned</span><span class="val" id="over-gold">0</span></div>
+      <div class="over-stat"><span class="label">Level Reached</span><span class="val" id="over-level">1</span></div>
+    </div>
+    <div class="over-btns">
+      <button class="btn-restart" id="btn-restart">🐎 RIDE AGAIN</button>
+      <button class="btn-shop2" id="btn-shop2">🛒</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────
+const save = {
+  gold: parseInt(localStorage.getItem('wd_gold')||'0'),
+  hs:   parseInt(localStorage.getItem('wd_hs')||'0'),
+  owned: JSON.parse(localStorage.getItem('wd_owned')||'["horse"]'),
+  skin: localStorage.getItem('wd_skin')||'horse'
+};
+
+function saveState() {
+  localStorage.setItem('wd_gold', save.gold);
+  localStorage.setItem('wd_hs', save.hs);
+  localStorage.setItem('wd_owned', JSON.stringify(save.owned));
+  localStorage.setItem('wd_skin', save.skin);
+}
+
+// ─── SHOP DATA ───────────────────────────────────────
+const shopItems = [
+  { id:'horse',  icon:'🐎', name:'Mustang',    desc:'Your trusty starter horse',  cost:0,   type:'skin' },
+  { id:'unicorn',icon:'🦄', name:'Unicorn',    desc:'+10% gem bonus',              cost:50,  type:'skin' },
+  { id:'camel',  icon:'🐫', name:'Camel',      desc:'Desert speed demon',          cost:80,  type:'skin' },
+  { id:'zebra',  icon:'🦓', name:'Zebra',      desc:'Dodge faster',                cost:120, type:'skin' },
+  { id:'magnet', icon:'🧲', name:'Gem Magnet', desc:'Pulls gems from farther',     cost:60,  type:'power', effect:'magnet' },
+  { id:'shield', icon:'🛡️', name:'Iron Shield',desc:'Survive one rock hit',        cost:100, type:'power', effect:'shield' },
+  { id:'boost',  icon:'🚀', name:'Speed Boost',desc:'Start at double speed',       cost:90,  type:'power', effect:'boost' },
+];
+
+// ─── AUDIO ───────────────────────────────────────────
+let sfxOn = true;
+let audioCtx = null;
+let bgmNodes = [];   // active BGM oscillators/gains
+let bgmRunning = false;
+let bgmScheduler = null;
+
+function getACtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// ── BGM: quiet pentatonic ambient loop ──
+// Notes: C4 D4 E4 G4 A4 (pentatonic, soft and meadow-y)
+const BGM_NOTES = [261.63, 293.66, 329.63, 392.00, 440.00, 392.00, 329.63, 293.66];
+const BGM_RHYTHM = [0.6, 0.4, 0.6, 0.8, 0.6, 0.4, 0.6, 0.8]; // note durations in seconds
+
+function playBgmNote(freq, startTime, duration, ctx) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  // Low-pass for softness
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 900;
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, startTime);
+
+  // Soft attack, long release
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(0.055, startTime + 0.05);
+  gain.gain.setValueAtTime(0.055, startTime + duration * 0.6);
+  gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.05);
+  bgmNodes.push(osc);
+}
+
+// Schedules one full loop of the melody, then calls itself
+function scheduleBgmLoop() {
+  if (!sfxOn || !bgmRunning) return;
+  const ctx = getACtx();
+  let t = ctx.currentTime + 0.05;
+
+  BGM_NOTES.forEach((freq, i) => {
+    playBgmNote(freq, t, BGM_RHYTHM[i] * 0.9, ctx);
+    // Occasional harmony a 5th up, very quiet
+    if (i % 3 === 0) playBgmNote(freq * 1.5, t, BGM_RHYTHM[i] * 0.7, ctx);
+    t += BGM_RHYTHM[i];
+  });
+
+  // Also add a soft bass pulse every beat
+  [0, 1.0, 2.5, 3.5].forEach(offset => {
+    const bassOsc = ctx.createOscillator();
+    const bassGain = ctx.createGain();
+    bassOsc.connect(bassGain);
+    bassGain.connect(ctx.destination);
+    bassOsc.type = 'sine';
+    bassOsc.frequency.value = 65.4; // C2
+    bassGain.gain.setValueAtTime(0, ctx.currentTime + 0.05 + offset);
+    bassGain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 0.15 + offset);
+    bassGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.55 + offset);
+    bassOsc.start(ctx.currentTime + 0.05 + offset);
+    bassOsc.stop(ctx.currentTime + 0.7 + offset);
+    bgmNodes.push(bassOsc);
+  });
+
+  // Total loop duration
+  const loopDur = BGM_RHYTHM.reduce((a, b) => a + b, 0) * 1000;
+  bgmScheduler = setTimeout(scheduleBgmLoop, loopDur - 200); // re-schedule just before end
+}
+
+function startBgm() {
+  if (bgmRunning) return;
+  bgmRunning = true;
+  scheduleBgmLoop();
+}
+
+function stopBgm() {
+  bgmRunning = false;
+  clearTimeout(bgmScheduler);
+  bgmNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+  bgmNodes = [];
+}
+
+// ── SFX ──
+function playTone(freq, type, duration, vol=0.3) {
+  if (!sfxOn) return;
+  try {
+    const ctx = getACtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+function sfxCollect()  { playTone(660,'sine',0.15,0.22); setTimeout(()=>playTone(880,'sine',0.1,0.18),80); }
+function sfxGem()      { playTone(880,'sine',0.1,0.25); setTimeout(()=>playTone(1100,'sine',0.12,0.22),60); setTimeout(()=>playTone(1320,'sine',0.18,0.18),130); }
+function sfxGold()     { playTone(440,'triangle',0.18,0.25); setTimeout(()=>playTone(550,'triangle',0.12,0.2),100); }
+function sfxJump()     { playTone(380,'sine',0.12,0.18); setTimeout(()=>playTone(520,'sine',0.1,0.12),70); }
+function sfxLevelUp()  { [500,600,700,800,1000].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.22,0.25),i*80)); }
+function sfxCombo()    { playTone(900,'sine',0.1,0.3); setTimeout(()=>playTone(1200,'sine',0.1,0.25),100); }
+function sfxGameOver() { [300,250,200,150].forEach((f,i)=>setTimeout(()=>playTone(f,'sawtooth',0.3,0.35),i*120)); }
+
+// ─── CANVAS GAME ─────────────────────────────────────
+const canvas = document.getElementById('game-canvas');
+const ctx2 = canvas.getContext('2d');
+let W, H, groundY, raf;
+
+const LANES = [0.25, 0.5, 0.75]; // x fraction
+let currentLane = 1;
+let targetLane  = 1;
+let laneX       = 0;
+let playerY     = 0;
+let jumpVel     = 0;
+let isJumping   = false;
+let playerSize  = 56;
+
+// Game state
+let score = 0, gold = 0, level = 1, combo = 0, comboTimer = 0;
+let speed = 2.8;
+let gameRunning = false;
+let hasMagnet = false, hasShield = false, hasShieldActive = false;
+
+// Objects: {x, y, type, collected}
+let objects = [];
+let objTimer = 0;
+
+// Background layers
+let bgLayers = [
+  { x:0, speed:0.3, items:[] }, // far clouds
+  { x:0, speed:0.8, items:[] }, // near trees
+  { x:0, speed:1.5, items:[] }, // bushes
+];
+
+// Ground tiles
+let groundScroll = 0;
+
+function resize() {
+  const wrap = document.getElementById('game-wrap');
+  W = canvas.width  = wrap.clientWidth;
+  H = canvas.height = wrap.clientHeight;
+  groundY = H * 0.72;
+  playerY = groundY - playerSize;
+  laneX   = LANES[currentLane] * W;
+}
+
+function initBg() {
+  // Clouds
+  bgLayers[0].items = Array.from({length:5}, (_,i) => ({
+    x: i*(W/4) + Math.random()*60,
+    y: H*0.05 + Math.random()*H*0.15,
+    w: 60 + Math.random()*40,
+    h: 30 + Math.random()*20,
+  }));
+  // Trees
+  bgLayers[1].items = Array.from({length:8}, (_,i) => ({
+    x: i*(W/6) + Math.random()*30,
+    y: groundY - 60,
+    h: 50 + Math.random()*40,
+  }));
+  // Bushes
+  bgLayers[2].items = Array.from({length:10}, (_,i) => ({
+    x: i*(W/8) + Math.random()*20,
+    y: groundY - 18,
+    r: 14 + Math.random()*10,
+  }));
+}
+
+function resetGame() {
+  score = 0; gold = 0; level = 1; combo = 0; comboTimer = 0;
+  speed = save.owned.includes('boost') ? 4.5 : 2.8;
+  currentLane = 1; targetLane = 1;
+  isJumping = false; jumpVel = 0;
+  objects = [];
+  objTimer = 0;
+  groundScroll = 0;
+  hasMagnet = save.owned.includes('magnet');
+  hasShieldActive = save.owned.includes('shield');
+  document.getElementById('hud-score').textContent = 0;
+  document.getElementById('hud-level').textContent = 1;
+  document.getElementById('hud-gold').textContent = 0;
+  document.getElementById('combo-display').style.display = 'none';
+  document.getElementById('level-banner').style.display = 'none';
+}
+
+function spawnObject() {
+  const lane = Math.floor(Math.random() * 3);
+  const types = ['apple','apple','coin','coin','gem','rock'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const icons = { apple:'🍎', coin:'🪙', gem:'💎', rock:'🪨' };
+  objects.push({
+    x: LANES[lane] * W,
+    y: -40,
+    type,
+    icon: icons[type],
+    lane,
+    collected: false,
+    size: type === 'rock' ? 42 : 36,
+    vy: 0,
+    flash: 0,
+  });
+}
+
+function floatText(text, x, y, color) {
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.style.color = color;
+  document.getElementById('game-screen').appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function burst(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const angle = (Math.PI * 2 / 8) * i;
+    const dist = 30 + Math.random() * 30;
+    p.style.cssText = `
+      left:${x}px; top:${y}px;
+      width:8px; height:8px;
+      background:${color};
+      --tx:${Math.cos(angle)*dist}px;
+      --ty:${Math.sin(angle)*dist}px;
+    `;
+    document.getElementById('game-screen').appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+
+function showLevelUp(lv) {
+  sfxLevelUp();
+  const banner = document.getElementById('level-banner');
+  document.getElementById('level-num').textContent = `Level ${lv} — Speed Up!`;
+  banner.style.display = 'block';
+  banner.style.animation = 'none';
+  void banner.offsetWidth;
+  banner.style.animation = 'comboPulse 0.5s ease-out';
+  setTimeout(() => { banner.style.display = 'none'; }, 2000);
+}
+
+// Draw helpers
+function drawEmoji(e, x, y, size) {
+  ctx2.font = `${size}px serif`;
+  ctx2.textAlign = 'center';
+  ctx2.textBaseline = 'middle';
+  ctx2.fillText(e, x, y);
+}
+
+function drawCloud(x, y, w, h) {
+  ctx2.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx2.beginPath();
+  ctx2.ellipse(x, y, w/2, h/2, 0, 0, Math.PI*2);
+  ctx2.ellipse(x+w*0.2, y-h*0.2, w*0.35, h*0.45, 0, 0, Math.PI*2);
+  ctx2.ellipse(x-w*0.2, y-h*0.1, w*0.3, h*0.35, 0, 0, Math.PI*2);
+  ctx2.fill();
+}
+
+function drawTree(x, y, h) {
+  // trunk
+  ctx2.fillStyle = '#7c5c3a';
+  ctx2.fillRect(x-4, y, 8, h*0.3);
+  // canopy
+  ctx2.fillStyle = '#2d6a1e';
+  ctx2.beginPath();
+  ctx2.arc(x, y, h*0.45, 0, Math.PI*2);
+  ctx2.fill();
+}
+
+function drawBush(x, y, r) {
+  ctx2.fillStyle = '#3a8a2a';
+  ctx2.beginPath();
+  ctx2.arc(x, y, r, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.fillStyle = '#4aaa3a';
+  ctx2.beginPath();
+  ctx2.arc(x-r*0.3, y-r*0.3, r*0.6, 0, Math.PI*2);
+  ctx2.fill();
+}
+
+function drawBackground() {
+  // Sky gradient
+  const skyGrad = ctx2.createLinearGradient(0,0,0,groundY);
+  skyGrad.addColorStop(0, '#4a9fd4');
+  skyGrad.addColorStop(1, '#b8e4f7');
+  ctx2.fillStyle = skyGrad;
+  ctx2.fillRect(0, 0, W, groundY);
+
+  // Sun
+  ctx2.fillStyle = '#FFD700';
+  ctx2.beginPath();
+  ctx2.arc(W*0.85, H*0.08, 28, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.fillStyle = 'rgba(255,215,0,0.15)';
+  ctx2.beginPath();
+  ctx2.arc(W*0.85, H*0.08, 42, 0, Math.PI*2);
+  ctx2.fill();
+
+  // Clouds
+  const cl = bgLayers[0];
+  cl.x -= cl.speed;
+  cl.items.forEach(c => {
+    const cx = ((c.x + cl.x * cl.speed) % (W + c.w) + W + c.w) % (W + c.w) - c.w/2;
+    drawCloud(cx, c.y, c.w, c.h);
+  });
+
+  // Ground base
+  const gGrad = ctx2.createLinearGradient(0, groundY, 0, H);
+  gGrad.addColorStop(0, '#5d8a3c');
+  gGrad.addColorStop(0.15, '#4a7230');
+  gGrad.addColorStop(1, '#3d6b22');
+  ctx2.fillStyle = gGrad;
+  ctx2.fillRect(0, groundY, W, H - groundY);
+
+  // Ground detail line
+  ctx2.fillStyle = '#6aaa44';
+  ctx2.fillRect(0, groundY, W, 6);
+
+  // Scrolling ground dashes
+  groundScroll = (groundScroll + speed) % 60;
+  ctx2.fillStyle = 'rgba(0,0,0,0.1)';
+  for (let x = -groundScroll; x < W; x += 60) {
+    ctx2.fillRect(x, groundY + 16, 32, 4);
+  }
+
+  // Trees
+  const tl = bgLayers[1];
+  tl.x -= tl.speed * speed / 3;
+  tl.items.forEach(t => {
+    const tx = ((t.x + tl.x) % (W + 80) + W + 80) % (W + 80) - 40;
+    drawTree(tx, t.y, t.h);
+  });
+
+  // Bushes
+  const bl = bgLayers[2];
+  bl.x -= bl.speed * speed / 3;
+  bl.items.forEach(b => {
+    const bx = ((b.x + bl.x) % (W + 40) + W + 40) % (W + 40) - 20;
+    drawBush(bx, b.y, b.r);
+  });
+
+  // Lane markers (subtle)
+  ctx2.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx2.setLineDash([12, 18]);
+  ctx2.lineWidth = 2;
+  [0.25, 0.5, 0.75].forEach(f => {
+    ctx2.beginPath();
+    ctx2.moveTo(f*W, groundY);
+    ctx2.lineTo(f*W, H);
+    ctx2.stroke();
+  });
+  ctx2.setLineDash([]);
+}
+
+function drawPlayer() {
+  // Smooth lane transition
+  const targetX = LANES[targetLane] * W;
+  laneX += (targetX - laneX) * 0.18;
+
+  // Running bob
+  const bobPhase = Date.now() / 120;
+  const bob = isJumping ? 0 : Math.sin(bobPhase) * 4;
+  const py = playerY + bob;
+
+  // Shield glow
+  if (hasShieldActive) {
+    ctx2.save();
+    ctx2.globalAlpha = 0.3 + Math.sin(Date.now()/200)*0.15;
+    ctx2.fillStyle = '#60a5fa';
+    ctx2.beginPath();
+    ctx2.arc(laneX, py, playerSize/1.5, 0, Math.PI*2);
+    ctx2.fill();
+    ctx2.restore();
+  }
+
+  // Shadow
+  if (!isJumping) {
+    ctx2.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx2.beginPath();
+    ctx2.ellipse(laneX, groundY + 4, 20, 6, 0, 0, Math.PI*2);
+    ctx2.fill();
+  }
+
+  // Player emoji
+  const skinMap = { horse:'🐎', unicorn:'🦄', camel:'🐫', zebra:'🦓' };
+  const skinEmoji = skinMap[save.skin] || '🐎';
+  drawEmoji(skinEmoji, laneX, py, playerSize);
+
+  currentLane = Math.round((laneX / W - 0.25) / 0.25);
+}
+
+function drawObjects(dt) {
+  objects.forEach(o => {
+    if (o.collected) return;
+    o.y += speed * 2.5 + (level - 1) * 0.3;
+
+    // Magnet pull
+    if (hasMagnet && o.type !== 'rock') {
+      const px = laneX;
+      const py2 = playerY;
+      const dx = px - o.x;
+      const dy = py2 - o.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < W * 0.35) {
+        o.x += dx * 0.08;
+        o.y += dy * 0.08;
+      }
+    }
+
+    // Hit test
+    const dx = o.x - laneX;
+    const dy = o.y - playerY;
+    const hitR = (o.size + playerSize) / 2.8;
+    if (Math.abs(dx) < hitR && Math.abs(dy) < hitR) {
+      o.collected = true;
+      handleCollect(o);
+    }
+
+    if (!o.collected) {
+      // Float/bob effect for collectibles
+      const floatBob = o.type !== 'rock' ? Math.sin(Date.now()/300 + o.x)*3 : 0;
+      ctx2.save();
+      if (o.flash > 0) {
+        ctx2.globalAlpha = 0.5 + Math.sin(Date.now()/50)*0.5;
+        o.flash--;
+      }
+      drawEmoji(o.icon, o.x, o.y + floatBob, o.size);
+      ctx2.restore();
+    }
+  });
+
+  // Remove off-screen
+  objects = objects.filter(o => o.y < H + 60 && !o.collected);
+}
+
+function handleCollect(o) {
+  const sx = o.x, sy = o.y;
+  if (o.type === 'rock') {
+    if (hasShieldActive) {
+      hasShieldActive = false;
+      burst(sx, sy, '#60a5fa');
+      floatText('🛡️ BLOCKED!', sx-30, sy-20, '#60a5fa');
+    } else {
+      sfxGameOver();
+      endGame();
+    }
+    return;
+  }
+
+  combo++;
+  clearTimeout(comboTimer);
+  comboTimer = setTimeout(() => { combo = 0; }, 1800);
+
+  if (o.type === 'apple')      { score += 5 * (combo > 2 ? combo : 1); sfxCollect(); burst(sx, sy, '#ef4444'); floatText(combo>2?`+${5*combo} 🔥`:`+5`, sx-10, sy-20, '#ef4444'); }
+  else if (o.type === 'coin')  { gold++; score += 3; sfxGold(); burst(sx, sy, '#f5c518'); floatText('+🪙', sx-10, sy-20, '#f5c518'); }
+  else if (o.type === 'gem')   { score += 20 * (combo > 2 ? combo : 1); sfxGem(); burst(sx, sy, '#8b5cf6'); floatText(combo>2?`+${20*combo} 💎`:`+20`, sx-10, sy-20, '#c4b5fd'); }
+
+  if (combo >= 3) {
+    sfxCombo();
+    const cd = document.getElementById('combo-display');
+    document.getElementById('combo-count').textContent = combo;
+    cd.style.display = 'block';
+    cd.style.animation = 'none';
+    void cd.offsetWidth;
+    cd.style.animation = 'comboPulse 0.4s ease-out';
+    setTimeout(() => { if (combo < 3) cd.style.display = 'none'; }, 1500);
+  }
+
+  // Level up check
+  const newLevel = Math.floor(score / 200) + 1;
+  if (newLevel > level) {
+    level = newLevel;
+    speed = Math.min(2.8 + (level-1)*0.35 + (save.owned.includes('boost')?1.7:0), 9);
+    showLevelUp(level);
+  }
+
+  document.getElementById('hud-score').textContent = score;
+  document.getElementById('hud-gold').textContent = gold;
+  document.getElementById('hud-level').textContent = level;
+}
+
+let lastTime = 0;
+function gameLoop(ts) {
+  if (!gameRunning) return;
+  const dt = ts - lastTime;
+  lastTime = ts;
+
+  ctx2.clearRect(0, 0, W, H);
+  drawBackground();
+
+  // Spawn objects
+  objTimer -= dt;
+  if (objTimer <= 0) {
+    spawnObject();
+    objTimer = Math.max(700 - level * 40, 280) + Math.random() * 300;
+  }
+
+  drawObjects(dt);
+
+  // Jump physics
+  if (isJumping) {
+    jumpVel += 0.6;
+    playerY += jumpVel;
+    if (playerY >= groundY - playerSize) {
+      playerY = groundY - playerSize;
+      isJumping = false;
+      jumpVel = 0;
+    }
+  }
+
+  drawPlayer();
+  raf = requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  showScreen('game-screen');
+  resize();
+  initBg();
+  resetGame();
+  gameRunning = true;
+  lastTime = performance.now();
+  startBgm();
+  raf = requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  gameRunning = false;
+  cancelAnimationFrame(raf);
+  stopBgm();
+  save.gold += gold;
+  if (score > save.hs) save.hs = score;
+  saveState();
+  showOver();
+}
+
+function showOver() {
+  document.getElementById('over-score').textContent = `${score} pts`;
+  const hsEl = document.getElementById('over-hs');
+  hsEl.textContent = `${save.hs} pts`;
+  if (score >= save.hs) hsEl.classList.add('new-hs');
+  else hsEl.classList.remove('new-hs');
+  document.getElementById('over-gold').textContent = `+${gold} 🪙`;
+  document.getElementById('over-level').textContent = `${level}`;
+  showScreen('over-screen');
+}
+
+// ─── SCREENS ─────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ─── SHOP ────────────────────────────────────────────
+function renderShop() {
+  document.getElementById('shop-gold-amt').textContent = save.gold;
+  const container = document.getElementById('shop-items');
+  container.innerHTML = '';
+
+  shopItems.forEach(item => {
+    const owned   = save.owned.includes(item.id);
+    const active  = save.skin === item.id;
+    const div = document.createElement('div');
+    div.className = 'shop-item' + (owned ? ' owned' : '') + (active ? ' active-skin' : '');
+
+    let btnHtml = '';
+    if (owned && item.type === 'skin') {
+      btnHtml = active
+        ? `<span class="equipped-badge">✓ ON</span>`
+        : `<button class="btn-equip" data-id="${item.id}">Equip</button>`;
+    } else if (owned && item.type === 'power') {
+      btnHtml = `<span class="equipped-badge">✓ ACTIVE</span>`;
+    } else {
+      btnHtml = `<button class="btn-buy" data-id="${item.id}" ${save.gold < item.cost ? 'disabled':''}>🪙${item.cost}</button>`;
+    }
+
+    div.innerHTML = `
+      <div class="shop-icon">${item.icon}</div>
+      <div class="shop-info">
+        <div class="shop-name">${item.name}</div>
+        <div class="shop-desc">${item.desc}</div>
+      </div>
+      ${btnHtml}
+    `;
+    container.appendChild(div);
+  });
+
+  container.querySelectorAll('.btn-buy').forEach(b => b.addEventListener('click', () => {
+    const item = shopItems.find(i => i.id === b.dataset.id);
+    if (!item || save.gold < item.cost) return;
+    save.gold -= item.cost;
+    save.owned.push(item.id);
+    if (item.type === 'skin') save.skin = item.id;
+    saveState();
+    sfxGem();
+    renderShop();
+  }));
+
+  container.querySelectorAll('.btn-equip').forEach(b => b.addEventListener('click', () => {
+    save.skin = b.dataset.id;
+    saveState();
+    sfxCollect();
+    renderShop();
+  }));
+}
+
+// ─── INPUT ───────────────────────────────────────────
+function doJump() {
+  if (!isJumping) {
+    isJumping = true;
+    jumpVel = -15;
+    sfxJump();
+  }
+}
+
+function doMoveLeft() {
+  if (targetLane > 0) { targetLane--; sfxJump(); }
+}
+
+function doMoveRight() {
+  if (targetLane < 2) { targetLane++; sfxJump(); }
+}
+
+// D-pad buttons — use pointerdown for instant response, no delay
+function wireCtrlBtn(id, action) {
+  const btn = document.getElementById(id);
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (gameRunning) action();
+  });
+}
+wireCtrlBtn('ctrl-left',  doMoveLeft);
+wireCtrlBtn('ctrl-right', doMoveRight);
+wireCtrlBtn('ctrl-jump',  doJump);
+
+// Keyboard fallback
+document.addEventListener('keydown', e => {
+  if (!gameRunning) return;
+  if (e.key === 'ArrowLeft')               doMoveLeft();
+  else if (e.key === 'ArrowRight')         doMoveRight();
+  else if (e.key === 'ArrowUp' || e.key === ' ') { e.preventDefault(); doJump(); }
+});
+
+// Shop button in-game
+document.getElementById('shop-btn').addEventListener('click', () => {
+  gameRunning = false;
+  cancelAnimationFrame(raf);
+  stopBgm();
+  renderShop();
+  showScreen('shop-screen');
+  document.getElementById('btn-back-shop').onclick = () => {
+    showScreen('game-screen');
+    gameRunning = true;
+    lastTime = performance.now();
+    startBgm();
+    raf = requestAnimationFrame(gameLoop);
+  };
+});
+
+// Over screen shop
+document.getElementById('btn-shop2').addEventListener('click', () => {
+  renderShop();
+  showScreen('shop-screen');
+  document.getElementById('btn-back-shop').onclick = () => showScreen('over-screen');
+});
+
+// Start
+document.getElementById('btn-start').addEventListener('click', () => startGame());
+document.getElementById('btn-restart').addEventListener('click', () => startGame());
+
+// Sound toggle (SFX + BGM)
+document.getElementById('sfx-toggle').addEventListener('click', function() {
+  sfxOn = !sfxOn;
+  this.textContent = sfxOn ? '🔊' : '🔇';
+  if (sfxOn && gameRunning) startBgm();
+  else if (!sfxOn) stopBgm();
+});
+
+// Init start screen HS
+document.getElementById('hs-display').textContent = `Best: ${save.hs} pts`;
+
+window.addEventListener('resize', () => { if (gameRunning) resize(); });
+resize();
+</script>
+</body>
+</html>
