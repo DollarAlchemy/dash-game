@@ -764,7 +764,7 @@ let laneX       = 0;
 let playerY     = 0;
 let jumpVel     = 0;
 let isJumping   = false;
-let playerSize  = 56;
+let playerSize  = 68;
 
 // Game state
 let score = 0, gold = 0, level = 1, combo = 0, comboTimer = 0;
@@ -790,7 +790,7 @@ function resize() {
   const wrap = document.getElementById('game-wrap');
   W = canvas.width  = wrap.clientWidth;
   H = canvas.height = wrap.clientHeight;
-  groundY = H * 0.72;
+  groundY = H * 0.80;
   playerY = groundY - playerSize;
   laneX   = LANES[currentLane] * W;
 }
@@ -806,13 +806,13 @@ function initBg() {
   // Trees
   bgLayers[1].items = Array.from({length:8}, (_,i) => ({
     x: i*(W/6) + Math.random()*30,
-    y: groundY - 60,
+    y: groundY - 80,
     h: 50 + Math.random()*40,
   }));
   // Bushes
   bgLayers[2].items = Array.from({length:10}, (_,i) => ({
     x: i*(W/8) + Math.random()*20,
-    y: groundY - 18,
+    y: groundY - 24,
     r: 14 + Math.random()*10,
   }));
 }
@@ -910,14 +910,15 @@ function drawCloud(x, y, w, h) {
 }
 
 function drawTree(x, y, h) {
-  // trunk
+  ctx2.save();
+  ctx2.globalAlpha = 0.72;
   ctx2.fillStyle = '#7c5c3a';
   ctx2.fillRect(x-4, y, 8, h*0.3);
-  // canopy
   ctx2.fillStyle = '#2d6a1e';
   ctx2.beginPath();
   ctx2.arc(x, y, h*0.45, 0, Math.PI*2);
   ctx2.fill();
+  ctx2.restore();
 }
 
 function drawBush(x, y, r) {
@@ -931,7 +932,7 @@ function drawBush(x, y, r) {
   ctx2.fill();
 }
 
-function drawBackground() {
+function drawBgBase() {
   // Sky gradient
   const skyGrad = ctx2.createLinearGradient(0,0,0,groundY);
   skyGrad.addColorStop(0, '#4a9fd4');
@@ -957,7 +958,15 @@ function drawBackground() {
     drawCloud(cx, c.y, c.w, c.h);
   });
 
-  // Ground base
+  // Trees in background (advance scroll here, draw faded behind ground line)
+  const tl = bgLayers[1];
+  tl.x -= tl.speed * speed / 3;
+  tl.items.forEach(t => {
+    const tx = ((t.x + tl.x) % (W + 80) + W + 80) % (W + 80) - 40;
+    drawTree(tx, t.y, t.h);
+  });
+
+  // Ground base (drawn AFTER trees so ground covers tree trunks cleanly)
   const gGrad = ctx2.createLinearGradient(0, groundY, 0, H);
   gGrad.addColorStop(0, '#5d8a3c');
   gGrad.addColorStop(0.15, '#4a7230');
@@ -976,22 +985,6 @@ function drawBackground() {
     ctx2.fillRect(x, groundY + 16, 32, 4);
   }
 
-  // Trees
-  const tl = bgLayers[1];
-  tl.x -= tl.speed * speed / 3;
-  tl.items.forEach(t => {
-    const tx = ((t.x + tl.x) % (W + 80) + W + 80) % (W + 80) - 40;
-    drawTree(tx, t.y, t.h);
-  });
-
-  // Bushes
-  const bl = bgLayers[2];
-  bl.x -= bl.speed * speed / 3;
-  bl.items.forEach(b => {
-    const bx = ((b.x + bl.x) % (W + 40) + W + 40) % (W + 40) - 20;
-    drawBush(bx, b.y, b.r);
-  });
-
   // Lane markers (subtle)
   ctx2.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx2.setLineDash([12, 18]);
@@ -1003,6 +996,16 @@ function drawBackground() {
     ctx2.stroke();
   });
   ctx2.setLineDash([]);
+}
+
+function drawBgForeground() {
+  // Bushes drawn in front of player for depth (small, near ground edge only)
+  const bl = bgLayers[2];
+  bl.x -= bl.speed * speed / 3;
+  bl.items.forEach(b => {
+    const bx = ((b.x + bl.x) % (W + 40) + W + 40) % (W + 40) - 20;
+    drawBush(bx, b.y, b.r);
+  });
 }
 
 function drawPlayer() {
@@ -1139,7 +1142,7 @@ function gameLoop(ts) {
   lastTime = ts;
 
   ctx2.clearRect(0, 0, W, H);
-  drawBackground();
+  drawBgBase();       // sky, clouds, trees (behind ground), ground fill
 
   // Spawn objects
   objTimer -= dt;
@@ -1148,7 +1151,7 @@ function gameLoop(ts) {
     objTimer = Math.max(700 - level * 40, 280) + Math.random() * 300;
   }
 
-  drawObjects(dt);
+  drawObjects(dt);    // collectibles & rocks
 
   // Jump physics
   if (isJumping) {
@@ -1161,7 +1164,8 @@ function gameLoop(ts) {
     }
   }
 
-  drawPlayer();
+  drawPlayer();       // horse — always on top of ground
+  drawBgForeground(); // bushes at ground edge for depth
   raf = requestAnimationFrame(gameLoop);
 }
 
